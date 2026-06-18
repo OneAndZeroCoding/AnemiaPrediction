@@ -150,9 +150,9 @@ Status markers: ✅ done · ▶ in progress · ⬜ not started. **Update these a
 | 6 | Explainable AI | SHAP global+local, 1 LIME example | ✅ |
 | 7 | Streamlit app | input → prediction → SHAP + disclaimer | ✅ |
 | 8 | Testing | edge-case + sanity tests (light) | ✅ |
-| 9 | Report | full project report | ⬜ |
-| 10 | PPT | ~12–15 slide deck | ⬜ |
-| 11 | Viva prep | Q&A drill sheet | ⬜ |
+| 9 | Report | full project report | ✅ (reports/REPORT.md) |
+| 10 | PPT | ~12–15 slide deck | ✅ (reports/PPT_OUTLINE.md) |
+| 11 | Viva prep | Q&A drill sheet | ✅ (reports/VIVA_PREP.md) |
 | ★ | Hb-excluded experiment | robustness analysis | ✅ [MARKS-BOOSTER] — nohb track ~chance, leakage quantified |
 
 ### Phase notes
@@ -179,5 +179,11 @@ Status markers: ✅ done · ▶ in progress · ⬜ not started. **Update these a
 
 ## 9. Current State
 
-- Planning complete. **Next concrete step: Phase 1 — lock the dataset**, then build EDA.
-- When starting Phase 1, compare 2–3 candidate datasets and pick the one with best coverage of the PDF's required CBC features.
+- **All build phases (0–11) complete.** Only Phase 4 model *training* is the
+  teammate's to (re-)run; the trained `.pkl` artifacts are already committed, so
+  every downstream phase works end-to-end now.
+- Deliverables: `src/` pipeline, notebooks 01–04, `app/streamlit_app.py`,
+  `tests/test_pipeline.py` (10 passing), `reports/REPORT.md`, `PPT_OUTLINE.md`,
+  `VIVA_PREP.md`, `metrics.json`, and 17 figures in `reports/figures/`.
+- **Remaining for the user:** turn `PPT_OUTLINE.md` into actual slides, rehearse
+  with `VIVA_PREP.md`, and (optionally) request the from-scratch walkthrough.
