@@ -23,6 +23,7 @@ Run:  python -m src.explain      # regenerates all explainability figures
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import shap
 from lime.lime_tabular import LimeTabularExplainer
 
@@ -131,17 +132,36 @@ def shap_local(track: str = "full", model_name: str = SHOWCASE_MODEL,
     return idx
 
 
-# --- LIME (one minimal example) ----------------------------------------------
-def lime_example(track: str = "full", model_name: str = SHOWCASE_MODEL,
-                 patient: str = "anaemic"):
+# --- predictions from all three models (for the comparison view) -------------
+def predict_all(raw_row: pd.DataFrame, track: str = "full") -> dict:
     """
-    One LIME explanation for a single patient. We train LIME on the ORIGINAL
-    (unscaled) values and wrap the model's predict_proba so it scales inputs
-    internally — this makes LIME's rules read in real units (e.g. 'Hemoglobin
-    <= 10.2') instead of z-scores.
+    Run ALL THREE models on one raw patient row. Returns
+    {model_name: (prediction, P(anaemic))}. Used by the app's comparison panel
+    so the "compare three models" objective is visible live, not just offline.
     """
-    import pandas as pd
+    scaler = joblib.load(config.SCALER_PATH)
+    features = config.FEATURE_SETS[track]
+    scaled = pd.DataFrame(
+        scaler.transform(raw_row[config.FEATURES]), columns=config.FEATURES
+    )[features]
+    out = {}
+    for name in config.MODEL_NAMES:
+        model = load_model(name, track)
+        out[name] = (int(model.predict(scaled)[0]),
+                     float(model.predict_proba(scaled)[0, 1]))
+    return out
 
+
+# --- LIME --------------------------------------------------------------------
+def build_lime_explainer(track: str = "full", model_name: str = SHOWCASE_MODEL):
+    """
+    Build a LIME explainer + a raw-input predict function for one model/track.
+
+    We train LIME on the ORIGINAL (unscaled) values and wrap predict_proba so it
+    scales inputs internally — so LIME's rules read in real units (e.g.
+    'Hemoglobin <= 10.2') instead of z-scores. Returned so both the figure
+    helper and the live app can reuse the exact same setup.
+    """
     model = load_model(model_name, track)
     features = config.FEATURE_SETS[track]
     scaler = joblib.load(config.SCALER_PATH)
@@ -154,7 +174,6 @@ def lime_example(track: str = "full", model_name: str = SHOWCASE_MODEL,
         scaled = pd.DataFrame(scaler.transform(full), columns=config.FEATURES)
         return model.predict_proba(scaled[features])
 
-    _, _, Xte_raw, y_test = _data(track)
     explainer = LimeTabularExplainer(
         training_data=load_processed(scaled=False)[0][features].values,
         feature_names=features,
@@ -163,11 +182,28 @@ def lime_example(track: str = "full", model_name: str = SHOWCASE_MODEL,
         discretize_continuous=True,
         random_state=config.RANDOM_STATE,
     )
+    return explainer, predict_proba_raw, features
+
+
+def lime_explain_row(raw_row: pd.DataFrame, track: str = "full",
+                     model_name: str = SHOWCASE_MODEL):
+    """LIME explanation for ONE arbitrary raw patient row (used by the app)."""
+    explainer, predict_fn, features = build_lime_explainer(track, model_name)
+    return explainer.explain_instance(
+        raw_row[features].values[0], predict_fn, num_features=len(features),
+    )
+
+
+def lime_example(track: str = "full", model_name: str = SHOWCASE_MODEL,
+                 patient: str = "anaemic"):
+    """One LIME explanation for a fixed test patient -> saved figure (Phase 6)."""
+    explainer, predict_fn, features = build_lime_explainer(track, model_name)
+    _, _, Xte_raw, y_test = _data(track)
 
     want = 1 if patient == "anaemic" else 0
     idx = int(np.where(y_test.values == want)[0][0])
     exp = explainer.explain_instance(
-        Xte_raw.iloc[idx].values, predict_proba_raw, num_features=len(features),
+        Xte_raw.iloc[idx].values, predict_fn, num_features=len(features),
     )
 
     fig = exp.as_pyplot_figure()

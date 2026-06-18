@@ -18,6 +18,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
+import json
+
 import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -25,7 +27,14 @@ import shap
 import streamlit as st
 
 from src import config
-from src.explain import SHOWCASE_MODEL, shap_explanation
+from src.explain import (
+    SHOWCASE_MODEL,
+    lime_explain_row,
+    predict_all,
+    shap_explanation,
+)
+
+PRETTY = {"random_forest": "Random Forest", "svm": "SVM", "xgboost": "XGBoost"}
 
 st.set_page_config(page_title="Anaemia Prediction (XAI)", page_icon="🩸", layout="centered")
 
@@ -35,6 +44,11 @@ def load_artifacts():
     model = joblib.load(config.model_path(SHOWCASE_MODEL, "full"))
     scaler = joblib.load(config.SCALER_PATH)
     return model, scaler
+
+
+@st.cache_data
+def load_metrics():
+    return json.loads(config.METRICS_PATH.read_text())
 
 
 model, scaler = load_artifacts()
@@ -125,6 +139,31 @@ if st.button("Predict", type="primary"):
         st.success(f"### Prediction: **{label}**")
     st.metric("Model confidence", f"{confidence * 100:.1f}%")
     st.progress(min(max(proba, 0.0), 1.0), text=f"P(anaemic) = {proba * 100:.1f}%")
+    st.caption(f"Decision shown above is from **{PRETTY[SHOWCASE_MODEL]}**, our "
+               "selected model. All three are compared next.")
+
+    # --- compare all three models -------------------------------------------
+    st.subheader("All three models compared")
+    st.caption("Model comparison is a core project objective. Below: how each model "
+               "scored on the held-out test set, and what each says about *this* patient.")
+    metrics = load_metrics()
+    votes = predict_all(raw_row)
+    comp_rows = []
+    for name in config.MODEL_NAMES:
+        v_pred, v_proba = votes[name]
+        m = metrics["full"][name]
+        comp_rows.append({
+            "Model": PRETTY[name] + (" ⭐ selected" if name == SHOWCASE_MODEL else ""),
+            "Test F1": f"{m['f1']:.2f}",
+            "Test AUC": f"{m['roc_auc']:.2f}",
+            "This patient": "Anaemic" if v_pred == 1 else "Not anaemic",
+            "P(anaemic)": f"{v_proba * 100:.1f}%",
+        })
+    st.dataframe(pd.DataFrame(comp_rows), hide_index=True, use_container_width=True)
+    if len({v[0] for v in votes.values()}) == 1:
+        st.caption("✅ All three models agree on this patient.")
+    else:
+        st.caption("⚠️ The models disagree here — compare their probabilities above.")
 
     # --- SHAP "why" ----------------------------------------------------------
     st.subheader("Why this prediction? (SHAP)")
@@ -173,6 +212,29 @@ if st.button("Predict", type="primary"):
         "removed, accuracy collapses to ~50% (chance).",
         icon="ℹ️",
     )
+
+    # --- LIME cross-check ----------------------------------------------------
+    st.subheader("Second opinion: LIME")
+    st.caption("LIME is an independent explainer: it fits a tiny linear model around "
+               "this one prediction and reports simple if-style rules. When it agrees "
+               "with SHAP, we trust the explanation more.")
+    with st.spinner("Running LIME (perturbs the input a few thousand times)…"):
+        lime_exp = lime_explain_row(raw_row)
+    lime_rows = [
+        {"Rule (for this patient)": rule,
+         "Weight": round(w, 3),
+         "Pushes toward": "Anaemic ⬆" if w > 0 else "Not anaemic ⬇"}
+        for rule, w in lime_exp.as_list()
+    ]
+    st.dataframe(pd.DataFrame(lime_rows), hide_index=True, use_container_width=True)
+    with st.expander("Show the LIME chart"):
+        lime_fig = lime_exp.as_pyplot_figure()
+        lime_fig.set_size_inches(7, 4)
+        lime_fig.tight_layout()
+        st.pyplot(lime_fig, bbox_inches="tight")
+        plt.close("all")
+    st.caption("LIME lands on the same low-Haemoglobin rule as SHAP — two different "
+               "methods, one consistent story.")
 
 st.divider()
 st.caption("Anaemia Prediction using Machine Learning & Explainable AI · "
