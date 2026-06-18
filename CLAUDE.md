@@ -141,19 +141,19 @@ Status markers: ✅ done · ▶ in progress · ⬜ not started. **Update these a
 
 | Phase | Name | Output | Status |
 |-------|------|--------|--------|
-| 0 | Setup & repo | env + folders + git | ⬜ |
-| 1 | Dataset & understanding | dataset in `data/raw/`, documented | ⬜ |
-| 2 | EDA | charts, insights, **leakage check** | ⬜ |
-| 3 | Preprocessing | clean split data, scaler saved | ⬜ |
-| 4 | Model training & comparison | 3 models, best saved | ⬜ |
-| 5 | Evaluation | 5 metrics + confusion matrix + ROC | ⬜ |
+| 0 | Setup & repo | env + folders + git | ✅ |
+| 1 | Dataset & understanding | dataset in `data/raw/`, documented | ✅ |
+| 2 | EDA | charts, insights, **leakage check** | ✅ |
+| 3 | Preprocessing | clean split data, scaler saved | ✅ |
+| 4 | Model training & comparison | 3 models, best saved | ▶ (script ready+verified; teammate to own) |
+| 5 | Evaluation | 5 metrics + confusion matrix + ROC | ✅ |
 | 6 | Explainable AI | SHAP global+local, 1 LIME example | ⬜ |
 | 7 | Streamlit app | input → prediction → SHAP + disclaimer | ⬜ |
 | 8 | Testing | edge-case + sanity tests (light) | ⬜ |
 | 9 | Report | full project report | ⬜ |
 | 10 | PPT | ~12–15 slide deck | ⬜ |
 | 11 | Viva prep | Q&A drill sheet | ⬜ |
-| ★ | Hb-excluded experiment | robustness analysis | ⬜ [MARKS-BOOSTER] |
+| ★ | Hb-excluded experiment | robustness analysis | ✅ [MARKS-BOOSTER] — nohb track ~chance, leakage quantified |
 
 ### Phase notes
 - **P1:** confirm exact dataset and document its source + columns. Flag any missing PDF-required features (e.g. RBC, haematocrit).

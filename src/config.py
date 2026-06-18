@@ -34,18 +34,26 @@ X_TEST_PATH = PROCESSED_DIR / "X_test.csv"
 Y_TRAIN_PATH = PROCESSED_DIR / "y_train.csv"
 Y_TEST_PATH = PROCESSED_DIR / "y_test.csv"
 
-# Saved model files (what the trainer must produce)
-MODEL_PATHS = {
-    "random_forest": MODELS_DIR / "random_forest.pkl",
-    "svm": MODELS_DIR / "svm.pkl",
-    "xgboost": MODELS_DIR / "xgboost.pkl",
-}
+# The three models we train and compare.
+MODEL_NAMES = ["random_forest", "svm", "xgboost"]
 
-# --- Data schema (FINALISE in Phase 1 once dataset is locked) ----------------
+
+def model_path(name: str, track: str = "full"):
+    """Path for a saved model. track='full' -> name.pkl ; track='nohb' -> name_nohb.pkl."""
+    suffix = "" if track == "full" else f"_{track}"
+    return MODELS_DIR / f"{name}{suffix}.pkl"
+
+
+# Convenience: full-track paths (what the Streamlit app loads).
+MODEL_PATHS = {name: model_path(name, "full") for name in MODEL_NAMES}
+
+# --- Data schema (FINALISED in Phase 1 — confirmed against real data) --------
+# Dataset: Biswaranjan Rao "Anemia Dataset", 1421 rows x 6 cols, no missing values.
 # TARGET = the column we predict. FEATURES = model inputs.
-TARGET = "Result"
+TARGET = "Result"          # 0 = not anaemic, 1 = anaemic
 
-# Placeholder feature list — update to match the chosen dataset's real columns.
+# Confirmed columns. NOTE: Gender is ALREADY encoded as 0/1 in the raw CSV,
+# so no label-encoding step is needed (the original plan assumed text).
 FEATURES = [
     "Gender",
     "Hemoglobin",
@@ -54,9 +62,19 @@ FEATURES = [
     "MCV",
 ]
 
+# Gender encoding observed in the data (see leakage analysis in 01_eda):
+#   0 -> Female (Result=1 when Hb < ~11.95, i.e. WHO 12 g/dL cutoff)
+#   1 -> Male   (Result=1 when Hb < ~13.40, i.e. WHO 13 g/dL cutoff)
+GENDER_MAP = {0: "Female", 1: "Male"}
+
 # Features used in the [MARKS-BOOSTER] leakage robustness experiment
 # (everything except the definitional Hemoglobin column).
 FEATURES_NO_HB = [f for f in FEATURES if f.lower() != "hemoglobin"]
+
+# Two experiment tracks compared throughout the project:
+#   'full' = all features  (LEAKY: includes Hb, the definitional feature)
+#   'nohb' = Hb excluded   (HONEST signal from the other red-cell indices)
+FEATURE_SETS = {"full": FEATURES, "nohb": FEATURES_NO_HB}
 
 # --- Reproducibility ---------------------------------------------------------
 RANDOM_STATE = 42

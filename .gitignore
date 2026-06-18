@@ -8,12 +8,11 @@ __pycache__/
 *.egg-info/
 .ipynb_checkpoints/
 
-# Data — keep raw dataset tracked, ignore generated splits
-data/processed/*
-!data/processed/.gitkeep
+# Data — raw dataset AND processed splits are committed so all teammates
+# evaluate the identical split (files are tiny, <20KB each).
 
-# Models (regenerable)
-models/*.pkl
+# Models — trained .pkl are committed (<1MB total) so the training step can be
+# handed off via GitHub: teammate trains -> pushes -> others pull & evaluate.
 
 # OS / editor
 .DS_Store
