@@ -1,0 +1,24 @@
+# Virtual environment
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Data — keep raw dataset tracked, ignore generated splits
+data/processed/*
+!data/processed/.gitkeep
+
+# Models (regenerable)
+models/*.pkl
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Jupyter
+*.ipynb_checkpoints
