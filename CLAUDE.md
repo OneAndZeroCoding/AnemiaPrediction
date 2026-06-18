@@ -148,8 +148,8 @@ Status markers: ✅ done · ▶ in progress · ⬜ not started. **Update these a
 | 4 | Model training & comparison | 3 models, best saved | ▶ (script ready+verified; teammate to own) |
 | 5 | Evaluation | 5 metrics + confusion matrix + ROC | ✅ |
 | 6 | Explainable AI | SHAP global+local, 1 LIME example | ✅ |
-| 7 | Streamlit app | input → prediction → SHAP + disclaimer | ⬜ |
-| 8 | Testing | edge-case + sanity tests (light) | ⬜ |
+| 7 | Streamlit app | input → prediction → SHAP + disclaimer | ✅ |
+| 8 | Testing | edge-case + sanity tests (light) | ✅ |
 | 9 | Report | full project report | ⬜ |
 | 10 | PPT | ~12–15 slide deck | ⬜ |
 | 11 | Viva prep | Q&A drill sheet | ⬜ |
