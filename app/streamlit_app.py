@@ -57,6 +57,28 @@ def num(field: str, label: str) -> float:
     )
 
 
+UNITS = {"Hemoglobin": "g/dL", "MCH": "pg", "MCHC": "g/dL", "MCV": "fL", "Gender": ""}
+
+
+def contribution_table(expl_row) -> pd.DataFrame:
+    """Turn one patient's SHAP values into a ranked, human-readable table."""
+    rows = []
+    for name, shap_val, value in zip(
+        expl_row.feature_names, expl_row.values, expl_row.data
+    ):
+        shown = (config.GENDER_MAP[int(value)] if name == "Gender"
+                 else f"{value:g} {UNITS[name]}".strip())
+        rows.append({
+            "Feature": name,
+            "This patient": shown,
+            "Contribution": round(float(shap_val), 2),
+            "Pushes toward": "Anaemic ⬆" if shap_val > 0 else "Not anaemic ⬇",
+        })
+    df = pd.DataFrame(rows)
+    order = df["Contribution"].abs().sort_values(ascending=False).index
+    return df.loc[order].reset_index(drop=True)
+
+
 # --- header ------------------------------------------------------------------
 st.title("🩸 Anaemia Prediction with Explainable AI")
 st.caption(
@@ -106,20 +128,49 @@ if st.button("Predict", type="primary"):
 
     # --- SHAP "why" ----------------------------------------------------------
     st.subheader("Why this prediction? (SHAP)")
-    st.caption("Red bars push toward *anaemic*; blue bars push toward *not anaemic*. "
-               "Values shown are this patient's actual CBC numbers.")
     expl = shap_explanation(model, scaled_row, raw_row)
-    shap.plots.waterfall(expl[0], show=False)
-    fig = plt.gcf()
-    fig.set_size_inches(8, 4)
-    fig.tight_layout()
-    st.pyplot(fig, bbox_inches="tight")
-    plt.close("all")
+    table = contribution_table(expl[0])
+    top = table.iloc[0]
+    share = abs(top["Contribution"]) / table["Contribution"].abs().sum() * 100
+    direction = "anaemic" if top["Contribution"] > 0 else "not anaemic"
+
+    # Plain-English headline — what actually drove THIS decision.
+    st.markdown(
+        f"**Main reason:** **{top['Feature']} = {top['This patient']}** — on its "
+        f"own it accounts for **{share:.0f}%** of this decision, pushing it toward "
+        f"**{direction}**."
+    )
+
+    # Clinical context for the dominant Haemoglobin driver.
+    if top["Feature"] == "Hemoglobin":
+        cutoff = 12 if gender_code == 0 else 13
+        rel = "below" if hb < cutoff else "at or above"
+        st.caption(
+            f"Context: the WHO anaemia cutoff for {gender_label.lower()}s is "
+            f"≈ {cutoff} g/dL. This patient's {hb:g} g/dL is **{rel}** it — which "
+            f"is exactly why the model leans this way."
+        )
+
+    # Full ranked breakdown (every feature, signed contribution).
+    st.markdown("**Full breakdown** — how each value pushed the prediction:")
+    st.dataframe(table, hide_index=True, use_container_width=True)
+
+    # The same thing as the standard SHAP waterfall picture.
+    with st.expander("Show the SHAP waterfall chart"):
+        st.caption("Bars start from the average prediction and add each feature's "
+                   "push until reaching this patient's score.")
+        shap.plots.waterfall(expl[0], show=False)
+        fig = plt.gcf()
+        fig.set_size_inches(8, 4)
+        fig.tight_layout()
+        st.pyplot(fig, bbox_inches="tight")
+        plt.close("all")
 
     st.info(
-        "Note: in this dataset the label is defined largely by a Haemoglobin "
-        "threshold, so Haemoglobin dominates the explanation. See the report's "
-        "label-leakage discussion.",
+        "Why is Haemoglobin almost always the top reason? Because in this dataset "
+        "the label was *defined* from a Haemoglobin threshold (label leakage). The "
+        "model is essentially re-reading Hb. We prove this in the report: with Hb "
+        "removed, accuracy collapses to ~50% (chance).",
         icon="ℹ️",
     )
 
